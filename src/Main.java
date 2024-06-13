@@ -19,9 +19,8 @@ public class Main {
                         usuarios
                 ).start();
             }
-        }catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
 }

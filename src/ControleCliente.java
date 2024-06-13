@@ -1,66 +1,54 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.util.Set;
 
 public class ControleCliente extends Thread {
-
     private Socket socket;
+    private BufferedReader in;
+    private PrintWriter out;
+    private Set<PrintWriter> usuarios;
+    private String nome;
 
-    private PrintWriter usuario;
-
-    private Set<PrintWriter> listaDeUsuarios;
-
-    ControleCliente(Socket socket, Set<PrintWriter> usuario) {
+    public ControleCliente(Socket socket, Set<PrintWriter> usuarios) throws IOException {
         this.socket = socket;
-        listaDeUsuarios = usuario;
+        this.usuarios = usuarios;
+        this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        this.out = new PrintWriter(socket.getOutputStream(), true);
     }
 
-    @Override
     public void run() {
-
         try {
-            BufferedReader leitor = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            usuario = new PrintWriter(socket.getOutputStream(), true);
-
-            synchronized (listaDeUsuarios) {
-                listaDeUsuarios.add(usuario);
+            synchronized (usuarios) {
+                usuarios.add(out);
             }
 
-            String usuiario = leitor.readLine();
-            transmitir(usuiario + " entrou no chat!");
-            System.out.println("O" + usuario + "conectou ao servidor");
-
-            String mensagem;
-            while ((mensagem = leitor.readLine()) != null) {
-
-                if(mensagem.equals("sair")) {
-                    break;
+            String msg;
+            while ((msg = in.readLine()) != null) {
+                System.out.println(msg);
+                if (nome == null) {
+                    nome = msg.split(" ")[0];
                 }
-
-                transmitir(usuiario + ": " + mensagem);
+                synchronized (usuarios) {
+                    for (PrintWriter usuario : usuarios) {
+                        usuario.println(msg);
+                    }
+                }
             }
-
-            synchronized (listaDeUsuarios) {
-                listaDeUsuarios.remove(usuario);
-            }
-
-            transmitir("O" + usuiario + "saiu do chat!");
-            System.out.println("O" + usuario + "se desconectou do servidor");
-
-        }catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            synchronized (usuarios) {
+                usuarios.remove(out);
+            }
+            try {
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    private void transmitir(String mensagem){
-            synchronized (listaDeUsuarios) {
-                listaDeUsuarios.forEach((usuario -> {
-                    usuario.println(mensagem);
-                }));
-            }
-
+    public String getNome() {
+        return nome;
     }
 }

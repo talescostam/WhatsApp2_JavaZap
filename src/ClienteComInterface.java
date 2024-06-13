@@ -12,14 +12,14 @@ import java.net.Socket;
 public class ClienteComInterface {
     private JFrame frame;
     private JTextField messageField;
-    private JTextArea chatArea;
     private JTextField nameField;
     private PrintWriter usuario;
     private Box messagesBox;
+    private String nome;
 
     public ClienteComInterface(String serverAddress, int port) {
         // Configurações da janela
-        frame = new JFrame("Chat Cliente 2");
+        frame = new JFrame("WhatsApp 2");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(500, 500);
         frame.setLayout(new BorderLayout());
@@ -65,8 +65,8 @@ public class ClienteComInterface {
     }
 
     private void conectarAoServidor(String serverAddress, int port) {
-        String client = nameField.getText();
-        if (client.isEmpty()) {
+        nome = nameField.getText();
+        if (nome.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Por favor, insira um nome.", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -76,14 +76,15 @@ public class ClienteComInterface {
             BufferedReader leitor = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             usuario = new PrintWriter(socket.getOutputStream(), true);
 
-            usuario.println(client);
+            usuario.println(nome + " entrou no chat!");
 
-            // Thread para receber mensagens do servidor
             Thread receptor = new Thread(() -> {
                 try {
                     String mensagemRecebida;
                     while ((mensagemRecebida = leitor.readLine()) != null) {
-                        adicionarMensagem(mensagemRecebida, false);
+                        if (!mensagemRecebida.startsWith(nome + ":")) {
+                            adicionarMensagem(mensagemRecebida, false);
+                        }
                     }
                 } catch (IOException ioException) {
                     adicionarMensagem("Finalizado", false);
@@ -98,7 +99,7 @@ public class ClienteComInterface {
     private void enviarMensagem() {
         String mensagem = messageField.getText();
         if (mensagem != null && !mensagem.trim().isEmpty()) {
-            usuario.println(mensagem);
+            usuario.println(nome + ": " + mensagem);
             adicionarMensagem(mensagem, true);
             messageField.setText("");
         }
@@ -120,12 +121,11 @@ public class ClienteComInterface {
         messagesBox.revalidate();
         messagesBox.repaint();
 
-        // Scroll to the bottom
         JScrollBar verticalScrollBar = ((JScrollPane) messagesBox.getParent().getParent()).getVerticalScrollBar();
         SwingUtilities.invokeLater(() -> verticalScrollBar.setValue(verticalScrollBar.getMaximum()));
     }
 
     public static void main(String[] args) {
-        new ClienteComInterface2("localhost", 12000);
+        new ClienteComInterface("localhost", 12000);
     }
 }
